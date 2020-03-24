@@ -1,0 +1,24 @@
+server:
+  port: 8082
+
+spring:
+  # MySQL配置
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    username: root
+    password: root
+    url: jdbc:mysql://192.168.0.115:3306/vhr?useUnicode=true&characterEncoding=UTF-8&serverTimeZone=Asia/Shanghai
+  # Redis配置
+  Redis:
+    host: 192.168.0.115
+    database: 0
+    port: 6379
+
+  #配置缓存
+  cache:
+    cache-names: menus_cache
+
+#  security:
+#    user:
+#      name: jayer
+#      password: 123456
