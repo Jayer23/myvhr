@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.jayer.vhr.mapper.MenuMapper">
+    <resultMap id="BaseResultMap" type="com.jayer.vhr.model.Menu">
+        <id column="id" property="id" jdbcType="INTEGER"/>
+        <result column="url" property="url" jdbcType="VARCHAR"/>
+        <result column="path" property="path" jdbcType="VARCHAR"/>
+        <result column="component" property="component" jdbcType="VARCHAR"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="iconCls" property="iconCls" jdbcType="VARCHAR"/>
+        <result column="parentId" property="parentId" jdbcType="INTEGER"/>
+        <result column="enabled" property="enabled" jdbcType="BIT"/>
+        <association property="meta" javaType="com.jayer.vhr.model.Meta">
+            <result column="keepAlive" property="keepAlive" jdbcType="BIT"/>
+            <result column="requireAuth" property="requireAuth" jdbcType="BIT"/>
+        </association>
+    </resultMap>
+    <select id="getAllMenusWithRole" resultType="com.jayer.vhr.model.Menu"></select>
+</mapper>
