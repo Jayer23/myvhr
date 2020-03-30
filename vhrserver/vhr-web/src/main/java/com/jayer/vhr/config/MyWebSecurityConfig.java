@@ -1,43 +1,54 @@
 package com.jayer.vhr.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jayer.vhr.model.Hr;
+import com.jayer.vhr.model.ResBean;
 import com.jayer.vhr.service.HrService;
-import io.netty.util.internal.NoOpTypeParameterMatcher;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cglib.proxy.NoOp;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.*;
+import org.springframework.security.config.annotation.ObjectPostProcessor;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.NoOpPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.access.intercept.FilterSecurityInterceptor;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
-import org.springframework.security.web.authentication.logout.LogoutHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 
-import javax.security.auth.login.CredentialExpiredException;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.security.Principal;
-import java.util.HashMap;
-import java.util.Map;
 
 @Configuration()
 public class MyWebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     HrService hrService;
+    @Autowired
+    CustomFilterInvocationSecurityMetadataSource securityMetadataSource;
+    @Autowired
+    CustomUrlDecisionManager decisionManager;
+    @Autowired
+    VerificationFilter verificationFilter;
+
     @Bean
     PasswordEncoder passwordEncoder(){
         return new BCryptPasswordEncoder(10);
+    }
+
+    @Override
+    public void configure(WebSecurity web) throws Exception {
+        web.ignoring().antMatchers("/login","/css/**", "/js/**", "/index.html", "/img/**", "/fonts/**", "/favicon.ico", "/verifyCode");
     }
 
     @Override
@@ -45,34 +56,35 @@ public class MyWebSecurityConfig extends WebSecurityConfigurerAdapter {
         auth.userDetailsService(hrService);
     }
 
+
     @Override
     protected void configure(HttpSecurity http) throws Exception {
+        http.addFilterBefore(verificationFilter,UsernamePasswordAuthenticationFilter.class);
         http.authorizeRequests()
-                .antMatchers("/admin/**")
-                .hasRole("admin")
-                .antMatchers("/user/**")
-                .access("hasAnyRole('admin','user')")
-                .antMatchers("/db/**")
-                .access("hasRole('dba') and hasRole('admin')")
-                .anyRequest()
-                .authenticated()
+                .withObjectPostProcessor(new ObjectPostProcessor<FilterSecurityInterceptor>() {
+                    @Override
+                    public <O extends FilterSecurityInterceptor> O postProcess(O object) {
+                        object.setAccessDecisionManager(decisionManager);
+                        object.setSecurityMetadataSource(securityMetadataSource);
+                        return object;
+                    }
+                })
                 .and()
                 .formLogin()
                 .usernameParameter("username")
                 .passwordParameter("password")
-                .loginProcessingUrl("/login")
-//                .loginPage("/index.html")
+                .loginProcessingUrl("/doLogin")
+                .loginPage("/login")
                 .successHandler(new AuthenticationSuccessHandler() {
                     @Override
                     public void onAuthenticationSuccess(HttpServletRequest req, HttpServletResponse resp, Authentication auth) throws IOException, ServletException {
-                        Object principal = auth.getPrincipal();
                         resp.setContentType("application/json;charset=utf-8");
-                        Map<String,Object> map = new HashMap<>();
-                        map.put("status",200);
-                        map.put("msg",principal);
+                        Hr hr = (Hr) auth.getPrincipal();
+                        hr.setPassword(null);
+                        ResBean ok = ResBean.ok("登录成功",hr);
                         PrintWriter out = resp.getWriter();
                         ObjectMapper om = new ObjectMapper();
-                        out.write(om.writeValueAsString(map));
+                        out.write(om.writeValueAsString(ok));
                         out.flush();
                         out.close();
                     }
@@ -82,49 +94,62 @@ public class MyWebSecurityConfig extends WebSecurityConfigurerAdapter {
                     public void onAuthenticationFailure(HttpServletRequest req, HttpServletResponse resp, AuthenticationException e) throws IOException, ServletException {
                         resp.setContentType("application/json;charset=utf-8");
                         PrintWriter out = resp.getWriter();
-                        resp.setStatus(401);
-                        Map<String,Object> map = new HashMap<>();
-                        map.put("status",401);
+                        resp.setStatus(500);
+                        ResBean resBean = ResBean.error("登录失败");
                         if(e instanceof LockedException){
-                            map.put("msg","账户被锁定");
+                            resBean.setMsg("账户被锁定，请联系管理员");
                         }else if(e instanceof BadCredentialsException){
-                            map.put("msg","用户名或者密码输入错误，登录失败");
+                            resBean.setMsg("用户名或者密码输入错误，请重新输入");
                         }else if(e instanceof DisabledException){
-                            map.put("msg","用户被禁用，登录失败");
+                            resBean.setMsg("用户被禁用，请联系管理员");
                         }else if(e instanceof AccountExpiredException){
-                            map.put("msg","账户过期，登录失败");
+                            resBean.setMsg("账户过期，请联系管理员");
                         }else if(e instanceof CredentialsExpiredException){
-                            map.put("msg","密码过期，登录失败");
-                        }else {
-                            map.put("msg","登录失败");
+                            resBean.setMsg("密码过期，请联系管理员");
                         }
                         ObjectMapper om = new ObjectMapper();
-                        out.write(om.writeValueAsString(map));
+                        out.write(om.writeValueAsString(resBean));
                         out.flush();
                         out.close();
                     }
                 })
+                .permitAll()
                 .and()
                 .logout()
                 .logoutUrl("/logout")
                 .clearAuthentication(true)
                 .invalidateHttpSession(true)
-                .addLogoutHandler(new LogoutHandler() {
-                    @Override
-                    public void logout(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse, Authentication authentication) {
-
-                    }
-                })
                 .logoutSuccessHandler(new LogoutSuccessHandler() {
                     @Override
                     public void onLogoutSuccess(HttpServletRequest req, HttpServletResponse resp, Authentication auth) throws IOException, ServletException {
-                        resp.sendRedirect("/index.html");
+                        resp.setContentType("application/json;charset=utf-8");
+                        PrintWriter out = resp.getWriter();
+                        ResBean resBean = ResBean.ok("注销成功!");
+                        out.write(new ObjectMapper().writeValueAsString(resBean));
+                        out.flush();
+                        out.close();
+
                     }
                 })
                 .permitAll()
                 .and()
                 .csrf()
-                .disable();
+                .disable()
+                .exceptionHandling()
+                .authenticationEntryPoint(new AuthenticationEntryPoint() {
+                    @Override
+                    public void commence(HttpServletRequest req, HttpServletResponse resp, AuthenticationException e) throws IOException, ServletException {
+                        resp.setContentType("application/json;charset=utf-8");
+                        resp.setStatus(401);
+                        PrintWriter out = resp.getWriter();
+                        ResBean resBean = ResBean.error("访问失败");
+                        resBean.setStatus(401);
+                        if(e instanceof InsufficientAuthenticationException){
+                            resBean.setMsg("请求失败，请联系管理员");
+                        }
+                        out.write(new ObjectMapper().writeValueAsString(resBean));
+                    }
+                });
 
 
 

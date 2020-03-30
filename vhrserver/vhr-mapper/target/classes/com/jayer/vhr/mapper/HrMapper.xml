@@ -14,7 +14,6 @@
         <result column="password" property="password" jdbcType="VARCHAR"/>
         <result column="userface" property="userface" jdbcType="VARCHAR"/>
         <result column="remark" property="remark" jdbcType="VARCHAR"/>
-
     </resultMap>
     <update id="updateByPrimaryKey"></update>
     <update id="updateByPrimaryKeySelective"></update>

@@ -13,10 +13,17 @@ spring:
     host: 192.168.0.115
     database: 0
     port: 6379
+  #配置消息队列RabbitMq
+  rabbitmq:
+    username: guest
+    password: guest
+    host: 192.168.0.115
+    publisher-confirms: true
+    publisher-returns: true
 
   #配置缓存
   cache:
-    cache-names: menus_cache
+    cache-names: my_menus_cache
 
 #  security:
 #    user:

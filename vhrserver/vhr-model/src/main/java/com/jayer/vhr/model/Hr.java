@@ -17,7 +17,6 @@ public class Hr implements UserDetails {
     private String address;
     private boolean enabled;
     private String username;
-    @JsonIgnore
     private String password;
     private String userface;
     private String remark;
@@ -36,7 +35,7 @@ public class Hr implements UserDetails {
     }
 
     public void setName(String name) {
-        this.name = name;
+        this.name = name == null ? null : name.trim();
     }
 
     public String getPhone() {
@@ -52,7 +51,7 @@ public class Hr implements UserDetails {
     }
 
     public void setTelephone(String telephone) {
-        this.telephone = telephone;
+        this.telephone = telephone == null ? null : telephone.trim();
     }
 
     public String getAddress() {
@@ -60,7 +59,7 @@ public class Hr implements UserDetails {
     }
 
     public void setAddress(String address) {
-        this.address = address;
+        this.address = address== null ? null : address.trim();
     }
 
     public boolean isEnabled() {
@@ -91,11 +90,11 @@ public class Hr implements UserDetails {
     }
 
     public void setUsername(String username) {
-        this.username = username;
+        this.username = username == null ? null : username.trim();
     }
 
-    @Override
     @JsonIgnore
+    @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         List<SimpleGrantedAuthority> authorities = new ArrayList<>(roles.size());
         for (Role role:roles) {
@@ -110,7 +109,7 @@ public class Hr implements UserDetails {
     }
 
     public void setPassword(String password) {
-        this.password = password;
+        this.password = password== null ? null : password.trim();
     }
 
     public String getUserface() {
@@ -118,7 +117,7 @@ public class Hr implements UserDetails {
     }
 
     public void setUserface(String userface) {
-        this.userface = userface;
+        this.userface = userface == null ? null : userface.trim();
     }
 
     public String getRemark() {
@@ -126,7 +125,7 @@ public class Hr implements UserDetails {
     }
 
     public void setRemark(String remark) {
-        this.remark = remark;
+        this.remark = remark == null ? null : remark.trim();
     }
 
     public List<Role> getRoles() {
