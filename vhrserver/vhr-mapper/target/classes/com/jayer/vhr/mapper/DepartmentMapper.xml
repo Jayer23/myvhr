@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.jayer.vhr.mapper.DepartmentMapper">
+    <resultMap id="BaseResultMap" type="com.jayer.vhr.model.Department">
+        <id column="id" property="id" jdbcType="INTEGER"/>
+        <result column="name" property="name" jdbcType="VARCHAR"/>
+        <result column="parentId" property="parentId" jdbcType="INTEGER"/>
+        <result column="depPath" property="depPath" jdbcType="VARCHAR"/>
+        <result column="enabled" property="enabled" jdbcType="BIT"/>
+        <result column="isParent" property="isParent" jdbcType="BIT"/>
+    </resultMap>
+    <resultMap id="DepartmentWithChildren" type="com.jayer.vhr.model.Department" extends="BaseResultMap">
+        <collection property="children" ofType="com.jayer.vhr.model.Department"
+                    select="com.jayer.vhr.mapper.DepartmentMapper.getAllDepartmentsByParentId" column="id"/>
+    </resultMap>
+    <select id="getAllDepartmentsByParentId" resultMap="DepartmentWithChildren">
+        select * from department where parentid=#{pid}
+    </select>
+</mapper>
